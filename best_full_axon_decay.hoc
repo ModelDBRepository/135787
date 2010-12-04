@@ -1,0 +1,1215 @@
+// The pyramidal cell with full dendritic tree and axon arbor for similating action potential generation process 
+//of paramidal cell in layer V of prefrontal cortex. 
+
+//This code is used to calculate the decay spacial constant of main axon. 
+
+//This neuronal model was used for the following papers:
+/*
+Shu Y, Duque A, Yu YG, McCormick DA.  Properties of action potential
+initiation in neocortical pyramidal cells: evidence from whole cell
+axon recordings.  Journal of Neurophysiology. 97: 746-760, (2007).
+
+Shu Y, Hasenstaub A, Duque A, Yu Y, McCormick DA (2006) Modulation of
+intracortical synaptic potentials by presynaptic somatic membrane
+potential.  Nature 441: 761-765.
+*/
+
+//----Yuguo Yu, 2007
+
+
+// ew = 0.01  this determines the coupling strengh
+//  soma set_stim(.5,0.25,0,10000) this determines the DC input to the soma
+
+objref sh, st, st1, axonal, dendritic, dendritic_only
+
+// load_proc("nrnmainmenu")
+load_file("nrngui.hoc")
+
+create soma
+access soma
+
+tstop = 300
+//dt =  0.005
+dt =  0.03
+steps_per_ms = 1/dt
+
+
+// --------------------------------------------------------------
+// passive & active membrane 
+// --------------------------------------------------------------
+
+ra        = 100  //before is 150
+global_ra = ra
+rm        = 40000
+c_m       = 0.7
+cm_myelin = 0.04
+//g_pas_node = 0.002
+g_pas_node = 0.02
+
+vsoma_init    = -65
+v_init    = -70
+celsius   = 37
+
+Ek = -90
+Ena = 60
+
+
+
+gna_dend = 20
+gna_node = 7500
+gna_soma = gna_dend*37.5
+
+gkv_axon = 1000
+gkv_soma = 400
+
+gca = .3
+gkm = .1
+gkca = 3
+
+gca_soma = gca
+gkm_soma = gkm
+gkca_soma = gkca
+ 
+//  forsec "node" gbar_kv = gkv_axon  
+
+// --------------------------------------------------------------
+// Axon geometry
+// --------------------------------------------------------------
+n_axon_seg = 15
+
+create soma,iseg,hill,myelin[n_axon_seg],node[n_axon_seg],nod, cnod[8]
+create ccnod[23]
+create c11[11],c12[4], c13[30], c14[41], c15[9], c110[2], c111[2]
+create c21[5], c22[19], c23[2]
+create c31[5], c32
+
+proc create_axon() {
+
+ create iseg,hill,myelin[n_axon_seg],node[n_axon_seg],nod, cnod[8]
+create ccnod[23]
+create c11[11],c12[4], c13[30], c14[41], c15[9], c110[2], c111[2]
+create c21[5], c22[19], c23[2]
+create c31[5], c32
+
+  soma {
+    equiv_diam = sqrt(area(.5)/(4*PI))
+
+    // area = equiv_diam^2*4*PI
+  }
+  if (numarg()) equiv_diam = $1
+
+  iseg {                // initial segment 
+     L = 40  
+     nseg = 10
+     diam = equiv_diam/15        // see Sloper and Powell 1982, Fig.71
+  }
+
+  hill {                
+    L = 10
+    nseg = 3
+    diam(0:1) = 3*iseg.diam:iseg.diam
+  }
+
+  // construct myelinated axon with nodes of ranvier
+
+    nod {           // unmyelinated main axon of PFC is long about 300 micronmeters
+      nseg = 30
+       //L = 1000         
+       L = 300         
+     diam = iseg.diam*0.9    
+    }
+
+    for i=0,7 {
+    cnod[i] {           // 1st order collaterals
+      nseg = 20
+     diam = iseg.diam*0.5       // .5?  nodes are thinner than axon
+            }
+              }
+
+    for i=0,22 {
+    ccnod[i] {            //second order collaterals
+      nseg = 20
+     diam = iseg.diam*0.4      
+            }
+              }
+    
+     cnod[0] {L = 1780}
+     cnod[1] {L = 3040}
+     cnod[2] {L = 1600}
+     cnod[3] {L = 1500}
+     cnod[4] {L = 300}
+     cnod[5] {L = 60}
+     cnod[6] {L = 830}
+     cnod[7] {L = 880}
+     
+    for i=0,10 {            //3rd order collaterals
+      c11[i] {
+      nseg = 10
+     diam = iseg.diam*0.35       
+               }
+              }
+    for i=0,3 {       
+      c12[i] {
+      nseg = 10
+     diam = iseg.diam*0.35   
+               }
+              }
+    for i=0,29 {           
+      c13[i] {
+      nseg = 10
+     diam = iseg.diam*0.35  
+               }
+              }
+    for i=0,40 {           
+      c14[i] {
+      nseg = 10
+     diam = iseg.diam*0.35 
+               }
+              }
+    for i=0,8 {          
+      c15[i] {
+      nseg = 10
+     diam = iseg.diam*0.35    
+               }
+              }
+    for i=0,1 {           // 
+      c110[i] {
+      nseg = 10
+     diam = iseg.diam*0.35   
+               }
+              }
+    for i=0,1 {           // 
+      c111[i] {
+      nseg = 10
+     diam = iseg.diam*0.35   
+               }
+              }
+    
+    for i=0,4 {           // 
+      c21[i] {
+      nseg = 10
+     diam = iseg.diam*0.35   
+               }
+              }
+    for i=0,18 {           //
+      c22[i] {
+      nseg = 10
+     diam = iseg.diam*0.35   
+               }
+              }
+    for i=0,1 {           // 
+      c23[i] {
+      nseg = 10
+     diam = iseg.diam*0.35   
+               }
+              }
+
+    for i=0,4 {           // 
+      c31[i] {
+      nseg = 10
+     diam = iseg.diam*0.35   
+               }
+              }
+              
+      c32 {
+      nseg = 5
+     diam = iseg.diam*0.35     
+      L = 130
+          }
+          
+     //12 subcol for 1st col
+     ccnod[0] {L = 1000} ccnod[1] {L = 625} ccnod[2] {L = 1310} ccnod[3] {L = 1160}
+     ccnod[4] {L = 850} ccnod[5] {L = 460} ccnod[6] {L = 160} ccnod[7] {L = 480}
+     ccnod[8] {L = 110} ccnod[9] {L = 480} ccnod[10] {L = 420} ccnod[11] {L = 126}
+        //11 subsubcol for ccnod[0]
+         c11[0] {L = 760} c11[1] {L = 360} c11[2] {L = 260} c11[3] {L = 105}
+         c11[4] {L = 360} c11[5] {L = 280} c11[6] {L = 130} c11[7] {L = 180}
+         c11[8] {L = 710} c11[9] {L = 400} c11[10] {L = 435}
+        // 4 subsubcol for ccnod[1]
+         c12[0] {L = 400} c12[1] {L = 510} c12[2] {L = 90} c11[3] {L = 150}
+     
+       //30 subsubcol for ccnod[2]
+         c13[0] {L = 1060} c13[1] {L = 438} c13[2] {L = 272} c13[3] {L = 264}
+         c13[4] {L = 510} c13[5] {L = 85} c13[6] {L = 220} c13[7] {L = 610}
+         
+         c13[8] {L = 700} c13[9] {L = 40} c13[10] {L = 178}
+         c13[11] {L = 890} c13[12] {L = 600} c13[13] {L = 440} c13[14] {L = 615}
+         c13[15] {L = 444} c13[16] {L = 330} c13[17] {L = 325} c13[18] {L = 80}
+         c13[19] {L = 150} c13[20] {L = 130} c13[21] {L = 560} c13[22] {L = 480}
+         
+         c13[23] {L = 606} c13[24] {L = 310} c13[25] {L = 290} c13[26] {L = 108} c13[27] {L = 200}
+         c13[28] {L = 72} c13[29] {L = 60} 
+
+       //41 subsubcol for ccnod[3]
+         c14[0] {L = 1075} c14[1] {L = 50} c14[2] {L = 818} c14[3] {L = 290}  c14[4] {L = 103} 
+         c14[5] {L = 657} c14[6] {L = 513} c14[7] {L = 226}
+         c14[8] {L = 500} c14[9] {L = 254} 
+         c14[10] {L = 700} c14[11] {L = 491} c14[12] {L = 584} c14[13] {L = 205} 
+         c14[14] {L = 278} c14[15] {L = 411} c14[16] {L = 286} 
+         c14[17] {L = 681} c14[18] {L = 57}  c14[19] {L = 480} 
+         
+         c14[20] {L = 504} c14[21] {L = 277}
+         c14[22] {L = 487} c14[23] {L = 422} c14[24] {L = 326} c14[25] {L = 60} c14[26] {L = 109} c14[27] {L = 366} 
+         c14[28] {L = 391} c14[29] {L = 69} 
+         c14[30] {L = 544} c14[31] {L = 366} c14[32] {L = 32} c14[33] {L = 120} c14[34] {L = 504} c14[35] {L = 68} 
+         c14[36] {L = 512} c14[37] {L = 382} c14[38] {L = 370} c14[39] {L = 50} c14[40] {L = 60} 
+                  
+                  
+       //9 subsubcol for ccnod[4]
+         c15[0] {L = 430} c15[1] {L = 658} c15[2] {L = 302} c15[3] {L = 160}  c15[4] {L = 560} 
+         c15[5] {L = 160} c15[6] {L = 330} c15[7] {L = 170}
+         c15[8] {L = 330} 
+         
+         //2 subsubcol for ccnod[9]
+         c110[0] {L = 300} c110[1] {L = 200}
+         
+         //2 subsubcol for ccnod[10]
+         c111[0] {L = 90} c111[1] {L = 260}
+     
+     //4 subcol for 2nd col
+     ccnod[12] {L = 650} ccnod[13] {L = 1425} ccnod[14] {L = 320} ccnod[15] {L = 930}
+        //5 subsubcol for ccnod[12]
+        c21[0] {L = 450} c21[1] {L = 225} c21[2] {L = 130}  c21[3] {L = 110}  c21[4] {L = 130} 
+        //19 subsubcol for ccnod[13]
+        c22[0] {L = 690} c22[1] {L = 615} c22[2] {L = 290}  c22[3] {L = 50}  c22[4] {L = 155} 
+        c22[5] {L = 450} c22[6] {L = 190} c22[7] {L = 80}  c22[8] {L = 115}  c22[9] {L = 60} 
+        c22[10] {L = 770} c22[11] {L = 260} c22[12] {L = 45}  c22[13] {L = 90}  c22[14] {L = 510} 
+        c22[15] {L = 220} c22[16] {L = 250} c22[17] {L = 220}  c22[18] {L = 320} 
+       //2 subsubcol for ccnod[14]
+        c23[0] {L = 140} c23[1] {L = 175}
+        
+     //4 subcol for 3rd col
+     ccnod[16] {L = 470} ccnod[17] {L = 125} ccnod[18] {L = 335} ccnod[19] {L = 230}
+         c31[0] {L = 445} c31[1] {L = 305} c31[2] {L = 155}  c31[3] {L = 360} c31[4] {L = 140} 
+     
+     //2 subcol for 4th col
+      ccnod[20] {L = 450} ccnod[21] {L = 50}
+        
+     //1 subcol for 7th col
+      ccnod[22] {L = 60}
+      
+  for i=0,n_axon_seg-1 {
+    myelin[i] {         // myelin element
+      nseg = 20
+      L = 200
+      diam = iseg.diam         
+    }
+    
+    node[i] {           // nodes of Ranvier
+      nseg = 1
+      L = 1.0           
+      diam = iseg.diam*.5      
+    }
+  }
+}
+   
+proc create_axon_connection() {
+
+    soma connect hill(0), 0.5
+  hill connect iseg(0), 1
+  iseg connect nod(0), 1
+  nod  connect node[0](0), 1
+   for i=0,n_axon_seg-2  { 
+      node[i] connect myelin[i](0), 1 
+      myelin[i] connect node[i+1](0), 1
+  }
+
+
+  // nod=500, iseg=50, hill=10
+  nod connect cnod[0](0), 0.06
+  nod connect cnod[1](0), 0.16
+  nod connect cnod[2](0), 0.42
+  nod connect cnod[3](0), 0.7
+  nod connect cnod[4](0), 0.91
+  nod connect cnod[5](0), 0.96
+  node[6] connect cnod[6](0), 0.5
+  node[9] connect cnod[7](0), 0.5
+    
+  cnod[0] connect ccnod[0](0), 0.018
+    ccnod[0] connect c11[0](0), 0.022
+      c11[0] connect c11[1](0), 0.08
+      c11[0] connect c11[2](0), 0.16
+      c11[2] connect c11[3](0), 0.1
+
+    ccnod[0] connect c11[4](0), 0.035
+      c11[4] connect c11[5](0), 0.018
+      c11[4] connect c11[6](0), 0.036
+      c11[5] connect c11[7](0), 0.4
+    
+    ccnod[0] connect c11[8](0), 0.056
+      c11[8] connect c11[9](0), 0.6
+   
+     ccnod[0] connect c11[10](0), 0.2
+
+     cnod[0] connect ccnod[1](0), 0.066
+     ccnod[1] connect c12[0](0), 0.001
+       c12[0] connect c12[1](0), 0.12
+       c12[0] connect c12[2](0), 0.2
+       c12[1] connect c12[3](0), 0.08
+    cnod[0] connect ccnod[2](0), 0.13
+     ccnod[2] connect c13[0](0), 0.14
+       c13[0] connect c13[1](0), 0.4
+       c13[0] connect c13[2](0), 0.45
+       c13[2] connect c13[3](0), 0.2
+       c13[0] connect c13[4](0), 0.5
+  	c13[4] connect c13[5](0), 0.16
+	c13[4] connect c13[6](0), 0.25
+       
+     ccnod[2] connect c13[7](0), 0.25
+     ccnod[2] connect c13[8](0), 0.28
+        c13[8] connect c13[9](0), 0.15
+	c13[8] connect c13[10](0), 0.35
+     
+     ccnod[2] connect c13[11](0), 0.33
+        c13[11] connect c13[12](0), 0.6
+	c13[12] connect c13[13](0), 0.05
+	
+    ccnod[2] connect c13[14](0), 0.35
+        c13[14] connect c13[15](0), 0.15
+	c13[15] connect c13[16](0), 0.2
+	c13[15] connect c13[17](0), 0.25
+	c13[17] connect c13[18](0), 0.1
+	c13[17] connect c13[19](0), 0.3
+	c13[15] connect c13[20](0), 0.3
+	
+    ccnod[2] connect c13[21](0), 0.38
+        c13[21] connect c13[22](0), 0.3
+	
+    ccnod[2] connect c13[23](0), 0.42
+        c13[23] connect c13[24](0), 0.08
+        c13[24] connect c13[25](0), 0.08
+        c13[25] connect c13[26](0), 0.2
+        c13[24] connect c13[27](0), 0.25
+        
+        c13[23] connect c13[28](0), 0.1
+        c13[23] connect c13[29](0), 0.15
+
+    cnod[0] connect ccnod[3](0), 0.144
+    ccnod[3] connect c14[0](0), 0.035
+        c14[0] connect c14[1](0), 0.45
+        
+    ccnod[3] connect c14[2](0), 0.155
+        c14[2] connect c14[3](0), 0.36
+        c14[2] connect c14[4](0), 0.71
+        
+    ccnod[3] connect c14[5](0), 0.264
+        c14[5] connect c14[6](0), 0.21
+        c14[5] connect c14[7](0), 0.29
+        
+    ccnod[3] connect c14[8](0), 0.32
+        c14[8] connect c14[9](0), 0.354
+        
+    ccnod[3] connect c14[10](0), 0.35
+        c14[10] connect c14[11](0), 0.1
+        c14[10] connect c14[12](0), 0.143
+        c14[10] connect c14[13](0), 0.236
+        c14[10] connect c14[14](0), 0.243
+        c14[10] connect c14[15](0), 0.4
+        c14[10] connect c14[16](0), 0.57
+        
+    ccnod[3] connect c14[17](0), 0.4
+        c14[17] connect c14[18](0), 0.39
+    ccnod[3] connect c14[19](0), 0.45
+    ccnod[3] connect c14[20](0), 0.47
+        c14[20] connect c14[21](0), 0.08
+    
+    ccnod[3] connect c14[22](0), 0.49
+        c14[22] connect c14[23](0), 0.1
+        c14[23] connect c14[24](0), 0.1
+        c14[23] connect c14[25](0), 0.2
+        c14[22] connect c14[26](0), 0.2
+        c14[22] connect c14[27](0), 0.3
+        
+    ccnod[3] connect c14[28](0), 0.51
+        c14[28] connect c14[29](0), 0.45
+        
+    ccnod[3] connect c14[30](0), 0.55
+        c14[30] connect c14[31](0), 0.01
+        c14[31] connect c14[32](0), 0.1
+        c14[31] connect c14[33](0), 0.2
+        c14[30] connect c14[34](0), 0.03
+        c14[34] connect c14[35](0), 0.01
+        
+    ccnod[3] connect c14[36](0), 0.6
+        c14[36] connect c14[37](0), 0.05
+        c14[36] connect c14[38](0), 0.27
+        c14[36] connect c14[39](0), 0.37
+        
+    ccnod[3] connect c14[40](0), 0.76
+
+  cnod[0] connect ccnod[4](0), 0.486
+    ccnod[4] connect c15[0](0), 0.05
+    ccnod[4] connect c15[1](0), 0.2
+    c15[1] connect c15[2](0), 0.5
+    
+    ccnod[4] connect c15[3](0), 0.25
+    ccnod[4] connect c15[4](0), 0.3
+    c15[4] connect c15[5](0), 0.2
+    c15[4] connect c15[6](0), 0.4
+    c15[4] connect c15[7](0), 0.6
+    ccnod[4] connect c15[8](0), 0.45
+    
+      
+  cnod[0] connect ccnod[5](0), 0.494
+  cnod[0] connect ccnod[6](0), 0.568
+  cnod[0] connect ccnod[7](0), 0.576
+  cnod[0] connect ccnod[8](0), 0.606
+  cnod[0] connect ccnod[9](0), 0.628
+        ccnod[9] connect c110[0](0), 0.1
+        ccnod[9] connect c110[1](0), 0.4
+  
+  cnod[0] connect ccnod[10](0), 0.652
+        ccnod[10] connect c111[0](0), 0.1
+        ccnod[10] connect c111[1](0), 0.25
+  
+  cnod[0] connect ccnod[11](0), 0.679
+  
+  cnod[1] connect ccnod[12](0), 0.0157
+    ccnod[12] connect c21[0](0), 0.031
+    c21[0] connect c21[1](0), 0.156
+    c21[0] connect c21[2](0), 0.333
+    c21[0] connect c21[3](0), 0.49
+    ccnod[12] connect c21[4](0), 0.29
+  
+  cnod[1] connect ccnod[13](0), 0.0173
+    ccnod[13] connect c22[0](0), 0.042
+    c22[0] connect c22[1](0), 0.06
+    c22[1] connect c22[2](0), 0.4
+    c22[1] connect c22[3](0), 0.7
+    c22[0] connect c22[4](0), 0.12
+    
+    ccnod[13] connect c22[5](0), 0.07
+      c22[5] connect c22[6](0), 0.4
+      c22[5] connect c22[7](0), 0.5
+    
+    ccnod[13] connect c22[8](0), 0.2
+      c22[8] connect c22[9](0), 0.2
+    
+    ccnod[13] connect c22[10](0), 0.4
+      c22[10] connect c22[11](0), 0.4
+      c22[10] connect c22[12](0), 0.5
+      c22[10] connect c22[13](0), 0.6
+    
+    ccnod[13] connect c22[14](0), 0.55
+      c22[14] connect c22[15](0), 0.5
+    
+    ccnod[13] connect c22[16](0), 0.7
+      c22[16] connect c22[17](0), 0.4
+    ccnod[13] connect c22[18](0), 0.8
+    
+
+  cnod[1] connect ccnod[14](0), 0.0535
+    ccnod[14] connect c23[0](0), 0.2
+    ccnod[14] connect c23[1](0), 0.4
+        
+  
+  cnod[1] connect ccnod[15](0), 0.179
+    
+  cnod[2] connect ccnod[16](0), 0.025
+    ccnod[16] connect c31[0](0), 0.02
+    ccnod[16] connect c31[1](0), 0.03
+    c31[1] connect c31[2](0), 0.4
+    ccnod[16] connect c31[3](0), 0.1
+    c31[3] connect c31[4](0), 0.1
+       
+  cnod[2] connect ccnod[17](0), 0.691
+    ccnod[17] connect c32(0), 0.7
+  cnod[2] connect ccnod[18](0), 0.697
+  cnod[2] connect ccnod[19](0), 0.809
+
+  cnod[3] connect ccnod[20](0), 0.267
+  cnod[3] connect ccnod[21](0), 0.867
+  cnod[6] connect ccnod[22](0), 0.78
+       }
+
+// --------------------------------------------------------------
+// Spines
+// --------------------------------------------------------------
+
+      // Based on the "Folding factor" described in
+      // Jack et al (1989), Major et al (1994)
+      // note, this assumes active channels are present in spines 
+      // at same density as dendrites
+
+spine_dens = 1
+      // just using a simple spine density model due to lack of data on some 
+      // neuron types.
+
+spine_area = 0.83 // um^2  -- K Harris
+
+proc add_spines() { local a
+  forsec $o1 {
+    a =0
+    for(x) a=a+area(x)
+
+    F = (L*spine_area*spine_dens + a)/a
+
+    L = L * F^(2/3)
+    for(x) diam(x) = diam(x) * F^(1/3)
+  }
+}
+
+
+
+proc init_cell() {
+
+  // passive
+  forall {
+    insert pas
+    Ra = ra 
+    cm = c_m 
+    g_pas = 1/rm
+    e_pas = v_init
+    }
+
+
+  // exceptions along the axon
+    forsec "myelin" cm = cm_myelin*1
+   forsec "myelin" g_pas = 0.00002
+    forsec "node" g_pas = g_pas_node
+    
+  // na+ channels
+  forall insert na
+
+  forsec dendritic gbar_na = gna_dend*1
+  forsec "myelin" gbar_na = gna_dend*1
+  hill.gbar_na = gna_node
+  iseg.gbar_na = gna_node
+  //iseg.g_pas = 1/rm
+  //nod.g_pas = 1/rm
+  forsec "node" gbar_na = gna_node/5
+  
+  nod.gbar_na = gna_node/3
+  forsec "cnod" gbar_na = gna_node/8.333
+  forsec "ccnod" gbar_na = gna_node/10
+    
+  forsec "c11" gbar_na = gna_node/20
+  forsec "c12" gbar_na = gna_node/20
+  forsec "c13" gbar_na = gna_node/20
+  forsec "c14" gbar_na = gna_node/20
+  forsec "c15" gbar_na = gna_node/20
+  forsec "c110" gbar_na = gna_node/20
+  forsec "c111" gbar_na = gna_node/20
+  forsec "c21" gbar_na = gna_node/20
+  forsec "c22" gbar_na = gna_node/20
+  forsec "c23" gbar_na = gna_node/20
+  forsec "c31" gbar_na = gna_node/20
+  forsec "c32" gbar_na = gna_node/20
+  
+ 
+//  forsec "node" gbar_kv = gkv_axon  
+  // this is added by Yu at Oct.13
+
+  // kv delayed rectifier channels
+  iseg { insert kv  gbar_kv = gkv_axon }
+  hill { insert kv  gbar_kv = gkv_axon }
+  soma { insert kv  gbar_kv = gkv_soma }
+  nod { insert kv  gbar_kv = gkv_axon/2 }
+  forsec "cnod" { insert kv  gbar_kv = gkv_axon/5 }
+  forsec "ccnod" { insert kv  gbar_kv = gkv_axon/10 }
+  
+  forsec "c11" { insert kv  gbar_kv = gkv_axon/20 }
+  forsec "c12" { insert kv  gbar_kv = gkv_axon/20 }
+  forsec "c13" { insert kv  gbar_kv = gkv_axon/20 }
+  forsec "c14" { insert kv  gbar_kv = gkv_axon/20 }
+  forsec "c15" { insert kv  gbar_kv = gkv_axon/20 }
+  forsec "c110" { insert kv  gbar_kv = gkv_axon/20 }
+  forsec "c111" { insert kv  gbar_kv = gkv_axon/20 }
+  forsec "c21" { insert kv  gbar_kv = gkv_axon/20 }
+  forsec "c22" { insert kv  gbar_kv = gkv_axon/20 }
+  forsec "c23" { insert kv  gbar_kv = gkv_axon/20 }
+  forsec "c31" { insert kv  gbar_kv = gkv_axon/20 }
+  forsec "c32" { insert kv  gbar_kv = gkv_axon/20 }
+      
+  // dendritic channels
+  forsec dendritic {
+    insert km    gbar_km  = gkm
+    insert kca   gbar_kca = gkca
+    insert ca    gbar_ca = gca
+    insert cad
+  }
+
+  soma {
+    gbar_na = gna_soma
+    gbar_km = gkm_soma
+    gbar_kca = gkca_soma
+    gbar_ca = gca_soma
+  }
+
+ 
+  forall if(ismembrane("k_ion")) ek = Ek
+  forall if(ismembrane("na_ion")) {
+    ena = Ena
+    // seems to be necessary for 3d cells to shift Na kinetics -5 mV
+    vshift_na = -5
+  }
+  forall if(ismembrane("ca_ion")) {
+    eca = 140
+    ion_style("ca_ion",0,1,0,0,0)
+    vshift_ca = 0
+  }
+}
+
+proc load_3dcell() {
+
+// $s1 filename
+
+  aspiny = 0
+  forall delete_section()    //forall delete_section will remove all sections. 
+  xopen($s1)
+  access soma
+
+  dendritic = new SectionList()
+
+  // make sure no compartments exceed 50 uM length
+  forall {
+    diam_save = diam
+    n = L/50
+    nseg = n + 1
+    if (n3d() == 0) diam = diam_save
+    dendritic.append()
+  }    
+
+
+  // show cell
+  sh = new PlotShape()
+  sh.size(-300,300,-300,300)
+
+  dendritic_only = new SectionList()
+  forsec dendritic dendritic_only.append()
+  soma  dendritic_only.remove()
+
+  create_axon()
+  create_axon_connection() 
+
+  init_cell()
+
+  if (!aspiny) add_spines(dendritic_only,spine_dens)
+
+}
+
+
+load_3dcell("j4a.hoc") 
+// load_3dcell("cells/j4a.hoc") 
+//load_3dcell("cells/j7.hoc") 
+//load_3dcell("cells/j8.hoc") 
+//load_3dcell("cells/lcAS3.hoc") 
+
+nrnmainmenu()
+nrncontrolmenu()
+//newPlotV()
+
+// --------------------------------------------------------------
+// synapses ----June 5, 2005
+// --------------------------------------------------------------
+ne=3    // number of excitatory synapses
+ni=3    // number of inhibitory synapses
+create dummy
+dummy {L = 20 diam = 20}
+objref espike[ne], ispike[ni], esyn[ne], isyn[ni], esconn[ne], isconn[ni]
+
+// Excitatory synaptic connections
+// set synaptic position and properties
+ew = 0.001  //for -80mv for 1/rm
+  //ew = 0.0001 //for *100
+soma esyn[0] = new Exp2Syn(0.5)
+soma esyn[1] = new Exp2Syn(0.5)
+soma esyn[2] = new Exp2Syn(0.5)
+
+//dend11[1] esyn[0] = new Exp2Syn(0.5)
+//dend11[1] esyn[1] = new Exp2Syn(0.5)
+//dend11[1] esyn[2] = new Exp2Syn(0.5)
+for i=0, ne-1 {
+  esyn[i].tau1 = 1
+  esyn[i].tau2 = 10
+  esyn[i].e = 0
+  // spike generator to excitatory connections
+  dummy espike[i] = new NetStim(0.5)
+//  espike[i].interval = 2
+  espike[i].start = 50
+//  espike[i].number = 0
+//  espike[i].noise = 0
+  // connect spike generator to synapse
+  esconn[i] = new NetCon(espike[i], esyn[i], -20, 1, ew)
+  esconn[0] = new NetCon(espike[0], esyn[0], -20, 1, ew*0.3)
+  }
+  espike[0].interval = 8
+  espike[0].number = 10000
+  espike[0].noise = 1
+  
+  espike[1].interval = 15
+//espike[1].interval = 8
+// espike[1].interval = 10
+  espike[1].number = 10000
+  espike[1].noise = 1
+
+  espike[1].interval = 25
+//  espike[1].interval = 20
+//  espike[2].interval = 20
+  espike[2].number = 10000
+  espike[2].noise = 1
+  
+
+// Inhibitory synaptic connections
+// set synaptic position and properties
+//iw = 0.0004
+iw = 0.00
+soma isyn[0] = new Exp2Syn(0.5)
+soma isyn[1] = new Exp2Syn(0.5)
+soma isyn[2] = new Exp2Syn(0.5)
+
+for i=0, ni-1 {
+  isyn[i].tau1 = 10
+  isyn[i].tau2 = 50
+  isyn[i].e = -80
+  // spike generator to inhibitory connections
+  dummy ispike[i] = new NetStim(0.5)
+
+  // connect spike generator to synapse
+  isconn[i] = new NetCon(ispike[i], isyn[i], -20, 1, iw)
+// netcon = new NetCon(source, target, threshould, delay, weight)
+//http://www.neuron.yale.edu/neuron/docs/help/neuron/neuron/classes/netcon.html
+}
+  ispike[0].interval = 5
+  ispike[0].number = 10000
+  ispike[0].start = 5
+  ispike[0].noise = 1
+  
+  ispike[1].interval = 20
+  ispike[1].number = 10000
+  ispike[1].start = 5
+  ispike[1].noise = 1
+
+  ispike[2].interval = 100
+  ispike[2].number = 10000
+  ispike[2].start = 5
+  ispike[2].noise = 1
+
+//  ispike[i].interval = 100
+ // ispike[i].start = 5
+ // ispike[i].number = 1000
+ // ispike[i].noise = 0.5
+
+
+// Create shape plot to display synapse positions
+// excitatory in red, inhibitory in blue
+objref ns
+ns = new Shape()
+for i=0, ne-1 {
+ns.point_mark(esyn[i], 2)
+}
+//for i=0, ni-1 {
+//ns.point_mark(isyn[i], 3)
+//}
+
+
+// Set excitatory weights
+proc eweight() {
+  for i=0, ne-1 esconn[i].weight = $1
+}
+
+// Set inhibitory weights
+proc iweight() {
+  for i=0, ni-1 isconn[i].weight = $1
+}
+
+xpanel("Connection Weights")
+xvalue("Exc. Weight", "ew", 1, "eweight(ew)", 0, 0)
+xvalue("Inh. Weight", "iw", 1, "iweight(iw)", 0, 0)
+xpanel()
+
+// --end of synapse------------------------------------------------------------
+
+// --------------------------------------------------------------
+// stimulus
+// --------------------------------------------------------------
+
+  st=new IClamp(.5)
+  st.dur = 5000
+  st.del = 5
+  st.amp = .0
+
+  st1=new IClamp(.5)
+  st1.dur = 5000
+  st1.del = 5
+  st1.amp = .0
+
+// --------------------------------------------------------------
+// create useful graphs & panels
+// --------------------------------------------------------------
+
+nrnmainmenu()
+//nrncontrolmenu()
+
+proc newplot() { local wd,ht
+    graphItem = new Graph(0)
+//    if (numarg()==1) $o1=graphItem // make a pointer
+//    if (numarg()==3) $o3=graphItem
+//    if (numarg()>1) { wd=$1 ht=$2 } else { wd=500 ht=300 }
+   wd=300 ht=200
+    graphItem.save_name("graphList[0].")
+    graphList[0].append(graphItem)
+    graphItem.view(0,-80,tstop,140,900,200,wd,ht)
+  }
+
+/*
+newplot()
+graphItem.addvar("esyn[0].i",3,1)
+graphItem.addvar("esyn[1].i",7,1)
+graphItem.addvar("esyn[2].i",5,1)
+
+newPlotV()
+graphItem.addvar("iseg.v(0)",17,1)
+graphItem.addvar("iseg.v(.1)",2,1)
+graphItem.addvar("iseg.v(.2)",3,1)
+graphItem.addvar("iseg.v(.3)",4,1)
+graphItem.addvar("iseg.v(.4)",5,1)
+graphItem.addvar("iseg.v(.5)",6,1)
+graphItem.addvar("iseg.v(.6)",7,1)
+graphItem.addvar("iseg.v(.7)",8,1)
+graphItem.addvar("iseg.v(.8)",9,1)
+graphItem.addvar("iseg.v(.9)",10,1)
+graphItem.addvar("iseg.v(1)",15,1)
+
+graphItem.addvar("node[0].v(.1)",12,1) //plot membrane potentials of different parts of axon
+//myelin[1] for (x) print x*L, v(x)
+
+newplot()
+graphItem.addvar("soma.ina(0.5)",7,1)
+graphItem.addvar("hill.ina(0.5)",1,1)
+graphItem.addvar("iseg.ina(0.5)",2,1)
+graphItem.addvar("node[0].ina(0.5)",5,1)
+*/
+
+newplot()
+graphItem.addvar("soma.v(0.5)",1,1)
+//graphItem.addvar("hill.v(0.5)",2,1)
+graphItem.addvar("iseg.v(0.7)",2,1)
+//graphItem.addvar("nod.v(0.2)",4,1)
+//graphItem.addvar("nod.v(0.6)",5,1)
+//graphItem.addvar("nod.v(0.8)",6,1)
+graphItem.addvar("node[0].v(0.5)",3,1)
+
+//graphItem.addvar("nod.v(0.1)",3,1)
+//graphItem.addvar("nod.v(0.4)",4,1)
+//graphItem.addvar("nod.v(0.6)",5,1)
+//graphItem.addvar("nod.v(0.8)",6,1)
+//graphItem.addvar("nod.v(0.9)",7,1)
+//graphItem.addvar("nod.v(1)",7,1)
+
+objectvar scene_vector_[14]
+objectvar save_window_, rvp_
+save_window_ = new Graph(0)
+save_window_.size(0,350,-80,40)
+scene_vector_[5] = save_window_
+{save_window_.view(0, -80, 350, 150, 33, 410, 300, 200)}
+flush_list.append(save_window_)
+save_window_.save_name("flush_list.")
+objectvar rvp_
+rvp_ = new RangeVarPlot("v")
+soma rvp_.begin(0)
+nod rvp_.end(1)
+//rvp_.origin(11.5382)
+save_window_.addobject(rvp_, 2, 1, 0.8, 0.9)  //addobject: Adds the RangeVarPlot to the list of items to be plotted on flush
+
+
+proc set_stim() {
+  st.loc($1)  st.amp = $2   st.del = $3   st.dur = $4
+}
+
+proc set_stim1() {
+  st1.loc($1)  st1.amp = $2   st1.del = $3   st1.dur = $4
+}
+
+//see C:\yale_journal\neuron\nrntuthtml\nrntuthtml\tutorial\tutE.html
+objref rect, recv, rec_iseg, rec_hill, rec_axon1, rec_axon3, rec_axon5, rec_axon7, rec_axon9 //used to record values of variables
+objref rec_syn1, rec_syn2,rec_syn3, rec_axon0, rec_axon2, rec_axon4, rec_axon6, rec_axon8, rec_axon10, rec_axon11
+objref csna, chna, cina, cana1, cana2, cana3, cana4, cana5, cana6, cana7, cana8, cana9, cana10
+objref seg0, seg1, seg2, seg3, seg4, seg5, seg6, seg7, seg8, seg9, seg10
+objref seg11, seg12, seg13, seg14, seg15, seg16, seg17, seg18, seg19, seg20
+objref rec_axon21, rec_axon22, rec_axon23, rec_axon24, rec_axon25, rec_axon26, rec_axon27, rec_axon28, rec_axon29, rec_axon30
+objref rec_axon31, rec_axon32, rec_axon33, rec_axon34, rec_axon35, rec_axon36, rec_axon37, rec_axon38, rec_axon39, rec_axon40
+objref rec_axon41, rec_axon42, rec_axon43, rec_axon44, rec_axon45, rec_axon46, rec_axon47, rec_axon48, rec_axon49, rec_axon50
+objref rec_axon51, rec_axon52, rec_axon53, rec_axon54, rec_axon55, rec_axon56, rec_axon57, rec_axon58, rec_axon59, rec_axon60, rec_axon61
+objref rec_caxon0, rec_caxon2, rec_caxon4, rec_caxon6, rec_caxon8, rec_caxon10
+objref rec_caxon1, rec_caxon3, rec_caxon5, rec_caxon7, rec_caxon9, rec_caxon11,rec_caxon12,rec_caxon13,rec_caxon14
+objref rec_axon20, rec_axon12, rec_axon14, rec_axon16, rec_axon18, rec_axon13, rec_axon11, rec_axon15, rec_axon17, rec_axon19
+objref rec_isy1, rec_isy2, rec_isy3,rec_axon31
+rec_isy1=new Vector()
+rec_isy2=new Vector()
+rec_isy3=new Vector()
+
+
+rect = new Vector()
+recv = new Vector()
+rec_hill=new Vector()
+rec_iseg=new Vector()
+rec_axon0=new Vector()
+rec_axon1=new Vector()
+rec_axon2=new Vector()
+rec_axon3=new Vector()
+rec_axon4=new Vector()
+rec_axon5=new Vector()
+rec_axon6=new Vector()
+rec_axon7=new Vector()
+rec_axon8=new Vector()
+rec_axon9=new Vector()
+rec_axon10=new Vector()
+rec_axon11=new Vector()
+rec_axon12=new Vector()
+rec_axon13=new Vector()
+rec_axon14=new Vector()
+rec_axon15=new Vector()
+rec_axon16=new Vector()
+rec_axon17=new Vector()
+rec_axon18=new Vector()
+rec_axon19=new Vector()
+rec_axon20=new Vector()
+
+seg0=new Vector()
+seg1=new Vector()
+seg2=new Vector()
+seg3=new Vector()
+seg4=new Vector()
+seg5=new Vector()
+seg6=new Vector()
+seg7=new Vector()
+seg8=new Vector()
+seg9=new Vector()
+seg10=new Vector()
+
+seg11=new Vector()
+seg12=new Vector()
+seg13=new Vector()
+seg14=new Vector()
+seg15=new Vector()
+seg16=new Vector()
+seg17=new Vector()
+seg18=new Vector()
+seg19=new Vector()
+seg20=new Vector()
+
+rec_axon21=new Vector()
+rec_axon22=new Vector()
+rec_axon23=new Vector()
+rec_axon24=new Vector()
+rec_axon25=new Vector()
+rec_axon26=new Vector()
+rec_axon27=new Vector()
+rec_axon28=new Vector()
+rec_axon29=new Vector()
+rec_axon30=new Vector()
+
+rec_axon31=new Vector()
+rec_axon32=new Vector()
+rec_axon33=new Vector()
+rec_axon34=new Vector()
+rec_axon35=new Vector()
+rec_axon36=new Vector()
+rec_axon37=new Vector()
+rec_axon38=new Vector()
+rec_axon39=new Vector()
+rec_axon40=new Vector()
+
+rec_axon51=new Vector()
+rec_axon52=new Vector()
+rec_axon53=new Vector()
+rec_axon54=new Vector()
+rec_axon55=new Vector()
+rec_axon56=new Vector()
+rec_axon57=new Vector()
+rec_axon58=new Vector()
+rec_axon59=new Vector()
+rec_axon60=new Vector()
+rec_axon61=new Vector()
+
+rec_caxon0=new Vector()
+rec_caxon1=new Vector()
+rec_caxon2=new Vector()
+rec_caxon3=new Vector()
+rec_caxon4=new Vector()
+rec_caxon5=new Vector()
+rec_caxon6=new Vector()
+rec_caxon7=new Vector()
+rec_caxon8=new Vector()
+rec_caxon9=new Vector()
+rec_caxon10=new Vector()
+rec_caxon11=new Vector()
+rec_caxon12=new Vector()
+rec_caxon13=new Vector()
+rec_caxon14=new Vector()
+rec_syn1=new Vector()
+rec_syn2=new Vector()
+rec_syn3=new Vector()
+csna=new Vector()
+chna=new Vector()
+cina=new Vector()
+cana1=new Vector()
+cana2=new Vector()
+cana3=new Vector()
+cana4=new Vector()
+
+/*
+objref savdata //used for saving file
+savdata = new File()  //savdata is a file pointer
+savdata.wopen("neuron_soma.dat")  //open a file with a defined name to save data
+objref savdata1 //used for saving file
+savdata1 = new File()  //savdata is a file pointer
+savdata1.wopen("ina.dat")  //open a file with a defined name to save data
+*/
+objref savdata2 //used for saving file
+savdata2 = new File()  //savdata is a file pointer
+savdata2.wopen("seg.dat")  //open a file with a defined name to save data
+
+/*
+objref savdata3 //used for saving file
+savdata3 = new File()  //savdata is a file pointer
+savdata3.wopen("cnod1.dat")  //open a file with a defined name to save data
+
+objref savdata4 //used for saving file
+savdata4 = new File()  //savdata is a file pointer
+savdata4.wopen("input_out.dat")  //open a file with a defined name to save data
+*/
+
+/*
+//------controlled by Gluct.mod---------------------------------------------------------------
+access soma
+
+objref fl
+fl = new Gfluct2(0.5)
+
+
+//fl.std_e = 0.012		// 4 times larger
+//fl.std_i = 0.0264
+
+fl.std_e = 0.012/1000		// 4 times larger
+fl.std_i =  0.0264/1000
+//fl.std_e = 0		// 4 times larger
+//fl.std_i = 0
+*/
+
+//********************stimulus injection***************************************
+soma set_stim1(.5,0,0,200000)
+proc soma_inj() {
+soma set_stim(.5,0,0,8)
+//soma set_stim(.5,2,0,8)
+//soma set_stim(.5,0.1,100,300)  //for 1/rm, vinit=-80, 0.1 is the stimulus threshold
+//st.loc($1)  st.amp = $2   st.del = $3 (delay)  st.dur = $4
+//********************stimulus injection***************************************
+
+
+recv.record(&soma.v(0.5))   //put value of soma.v to recv
+rect.record(&t)             //put value of t to rect 
+rec_hill.record(&hill.v(0.5))
+
+seg0.record(&iseg.v(0))
+seg1.record(&iseg.v(.125))
+seg2.record(&iseg.v(.25))
+seg3.record(&iseg.v(.375))
+seg4.record(&iseg.v(.5))
+seg5.record(&iseg.v(.625))
+seg9.record(&iseg.v(0.7)) // this is the initiation point
+seg6.record(&iseg.v(.75))
+seg7.record(&iseg.v(.875))
+seg8.record(&iseg.v(1))
+
+
+rec_axon1.record(&nod.v(.025))
+rec_axon2.record(&nod.v(.05))
+rec_axon3.record(&nod.v(0.075))
+rec_axon4.record(&nod.v(0.1))
+rec_axon5.record(&nod.v(0.125))
+rec_axon6.record(&nod.v(0.15))
+rec_axon7.record(&nod.v(0.175))
+rec_axon8.record(&nod.v(0.2))
+rec_axon9.record(&nod.v(0.225))
+rec_axon10.record(&nod.v(0.25))
+
+rec_axon11.record(&nod.v(.275))
+rec_axon12.record(&nod.v(.3))
+rec_axon13.record(&nod.v(.325))
+rec_axon14.record(&nod.v(0.35))
+rec_axon15.record(&nod.v(0.375))
+rec_axon16.record(&nod.v(0.4))
+rec_axon17.record(&nod.v(0.425))
+rec_axon18.record(&nod.v(0.45))
+rec_axon19.record(&nod.v(0.475))
+rec_axon20.record(&nod.v(0.5))
+
+rec_axon21.record(&nod.v(.525))
+rec_axon22.record(&nod.v(.55))
+rec_axon23.record(&nod.v(0.575))
+rec_axon24.record(&nod.v(0.6))
+rec_axon25.record(&nod.v(0.625))
+rec_axon26.record(&nod.v(0.65))
+rec_axon27.record(&nod.v(0.675))
+rec_axon28.record(&nod.v(0.7))
+rec_axon29.record(&nod.v(0.725))
+rec_axon30.record(&nod.v(0.75))
+
+rec_axon31.record(&nod.v(.775))
+rec_axon32.record(&nod.v(.8))
+rec_axon33.record(&nod.v(.825))
+rec_axon34.record(&nod.v(0.85))
+rec_axon35.record(&nod.v(0.875))
+rec_axon36.record(&nod.v(0.9))
+rec_axon37.record(&nod.v(0.925))
+rec_axon38.record(&nod.v(0.95))
+rec_axon39.record(&nod.v(0.975))
+rec_axon40.record(&nod.v(1))
+
+rec_axon51.record(&node[0].v(.5))
+rec_axon52.record(&node[1].v(.5))
+rec_axon53.record(&node[2].v(0.5))
+rec_axon54.record(&node[3].v(0.5))
+rec_axon55.record(&node[4].v(0.5))
+rec_axon56.record(&node[5].v(0.5))
+rec_axon57.record(&node[6].v(0.5))
+rec_axon58.record(&node[7].v(0.5))
+rec_axon59.record(&node[8].v(0.5))
+rec_axon60.record(&node[9].v(0.5))
+rec_axon61.record(&node[14].v(0.5))
+
+rec_isy1.record(&esyn[0].i)
+rec_isy2.record(&esyn[1].i)
+rec_isy3.record(&esyn[2].i)
+
+
+rec_caxon0.record(&cnod[0].v(0))
+rec_caxon11.record(&cnod[0].v(.025))
+rec_caxon12.record(&cnod[0].v(.05))
+rec_caxon13.record(&cnod[0].v(.075))
+rec_caxon1.record(&cnod[0].v(.1))
+rec_caxon14.record(&cnod[0].v(.15))
+rec_caxon2.record(&cnod[0].v(.2))
+rec_caxon3.record(&cnod[0].v(0.3))
+rec_caxon4.record(&cnod[0].v(0.4))
+rec_caxon5.record(&cnod[0].v(0.5))
+rec_caxon6.record(&cnod[0].v(0.6))
+rec_caxon7.record(&cnod[0].v(0.7))
+rec_caxon8.record(&cnod[0].v(0.8))
+rec_caxon9.record(&cnod[0].v(0.9))
+rec_caxon10.record(&cnod[0].v(1))
+
+
+csna.record(&soma.ina(0.5))
+chna.record(&hill.ina(0.5))
+cina.record(&iseg.ina(0.5))
+cana1.record(&nod.ina(0.3))
+cana2.record(&nod.ina(.6))
+cana3.record(&nod.ina(1))
+
+
+run() // this is the right position
+
+// the following write the data to the file pointer savdata
+for i=0,rect.size()-1 {
+//    savdata.printf("%g %g\n", rect.x(i), recv.x(i))
+savdata2.printf("%g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g \n", rect.x(i),recv.x(i),rec_hill.x(i),seg0.x(i),seg1.x(i),seg2.x(i),seg3.x(i),seg4.x(i),seg5.x(i),seg9.x(i),seg6.x(i),seg7.x(i),seg8.x(i),rec_axon1.x(i),rec_axon2.x(i),rec_axon3.x(i),rec_axon4.x(i),rec_axon5.x(i),rec_axon6.x(i),rec_axon7.x(i),rec_axon8.x(i),rec_axon9.x(i),rec_axon10.x(i),rec_axon11.x(i),rec_axon12.x(i),rec_axon13.x(i),rec_axon14.x(i),rec_axon15.x(i),rec_axon16.x(i),rec_axon17.x(i),rec_axon18.x(i),rec_axon19.x(i),rec_axon20.x(i),rec_axon21.x(i),rec_axon22.x(i),rec_axon23.x(i),rec_axon24.x(i),rec_axon25.x(i),rec_axon26.x(i),rec_axon27.x(i),rec_axon28.x(i),rec_axon29.x(i),rec_axon30.x(i),rec_axon31.x(i),rec_axon32.x(i),rec_axon33.x(i),rec_axon34.x(i),rec_axon35.x(i),rec_axon36.x(i),rec_axon37.x(i),rec_axon38.x(i),rec_axon39.x(i),rec_axon40.x(i))
+
+}
+savdata2.close()
+}
+xpanel("Stimulus Injection")
+xbutton("inject soma","soma_inj()")
+xpanel()

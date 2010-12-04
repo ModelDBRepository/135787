@@ -1,0 +1,70 @@
+/*----------------------------------------------------------------
+%W%  %G%
+j4.txt  translated Mon Nov  1 16:56:20 1993 by ntscable 2.0
+source file syntax: Douglas 3D
+output file syntax: CABLE
+soma: diameter = 25 um length = 35 um area = 2747.9 um2
+11 primary neurites
+87 branches totaling 17667.6 um in length, 52996.2 um2 in area
+3383 tree points translated to 164 segments (1 requested)
+Neurites divided into segments of equal dx between adjacent digitized
+branch points.
+Segment length constrained to be < 17667.6 um.
+----------------------------------------------------------------*/
+					/* create sections */
+create    soma,\
+          dend0,\
+          dend1,\
+          dend2,\
+          dend3
+/*----------------------------------------------------------------*/
+proc geometry() { local i, j
+
+						/* soma geometry */
+    soma {
+        nseg = 1
+	diam = 25
+	L = 35
+    }
+
+					/* connect primary neurites */
+    soma connect dend0 (0), 0
+    soma connect dend1 (0), 1
+    dend1 connect dend2 (0), 1
+    dend1 connect dend3 (0), 1
+
+    dend0 {
+    nseg = 10 
+    diam = 2
+    L = 1000 
+	  }
+    dend1 {
+    nseg = 10 
+    diam = 2
+    L = 2000 
+	  }
+    dend2 {
+    nseg = 10 
+    diam = 1
+    L = 500 
+	  }
+    dend3 {
+    nseg = 10 
+    diam = 2
+    L = 500 
+	  }
+	  
+   }
+   
+geometry()
+
+
+proc geometry() { 
+
+	/* NULL geometry procedure: keeps the user from
+	calling the geometry procedure in isolation. */
+
+    printf("\nYou must re-read the entire geometry\n")
+    printf("file to execute geometry().\n\n")
+}
+

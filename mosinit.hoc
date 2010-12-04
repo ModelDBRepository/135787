@@ -1,0 +1,9 @@
+load_file("nrngui.hoc")
+
+xpanel("Shu et al. 2006, 2007")
+  xlabel("Select one of the below two simulations then quit and restart")
+  xlabel("to run the other")
+  xbutton("spike initialization","load_file(\"best_full_axon_spike_init.hoc\")")
+  xbutton("axon potential decay","load_file(\"best_full_axon_decay.hoc\")")
+  xbutton("quit","quit()")
+xpanel()
