@@ -83,7 +83,7 @@ ASSIGNED {
 }
 
 BREAKPOINT { 
-	SOLVE states METHOD euler
+	SOLVE states METHOD derivimplicit : see http://www.neuron.yale.edu/phpBB/viewtopic.php?f=28&t=592
 	ih = ghbar * (s1+s2) * (f1+f2) * (v-eh)
 }
 

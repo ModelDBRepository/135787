@@ -32,3 +32,6 @@ Yuguo Yu
 Yale University
 
 yuguo.yu@yale.edu
+
+20111026 cad.mod capump.mod ih.mod release.mod updated to use
+derivimplicit method.  See files for more details.

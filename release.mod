@@ -102,7 +102,7 @@ INITIAL {
 }
 
 BREAKPOINT {
-	SOLVE state METHOD euler
+	SOLVE state METHOD derivimplicit : see http://www.neuron.yale.edu/phpBB/viewtopic.php?f=28&t=592
 }
 
 LOCAL bfc , kfv
